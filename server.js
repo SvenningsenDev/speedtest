@@ -1,17 +1,35 @@
 const { exec } = require('child_process');
 const express = require('express');
+const promClient = require('prom-client');
+
+// Create a Prometheus Registry
+const register = new promClient.Registry();
+
+const gaugeDefinitions = [
+  { name: 'Ping', help: 'Ping' },
+  { name: 'download', help: 'download' },
+  { name: 'upload', help: 'upload' },
+  { name: 'Jitter', help: 'Jitter' },
+];
+
+const gauges = {};
+
+gaugeDefinitions.forEach(({ name, help }) => {
+  const gauge = new promClient.Gauge({ name, help });
+  gauges[name] = gauge;
+});
+
 const app = express();
-
-
-const PORT = 3000;
+const PORT = 8080;
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Define the /metrics endpoint
+// Endpoint to expose metrics for Prometheus
 app.get('/metrics', (req, res) => {
-  res.json(speedtest());
+  res.set('Content-Type', register.contentType);
+  res.end(register.metrics());
 });
 
 async function runSpeedtestCLI() {
@@ -44,20 +62,22 @@ async function getMetrics(response) {
   const jitterMatch = response.match(jitterRegex);
 
   // Check if the matches are found before accessing the values
-  const metrics = {
-    ping: pingMatch ? pingMatch[1] : null,
-    download: downloadMatch ? downloadMatch[1] : null,
-    upload: uploadMatch ? uploadMatch[1] : null,
-    jitter: jitterMatch ? jitterMatch[1] : null,
-  };
 
-  console.log('Metrics:', metrics);
+    gauges[ping] = pingMatch ? pingMatch[1] : null;
+    gauges[download] = downloadMatch ? downloadMatch[1] : null;
+    gauges[upload] = uploadMatch ? uploadMatch[1] : null;
+    gauges[jitter] = jitterMatch ? jitterMatch[1] : null;
 
-  // console.log('Ping:', ping);
-  // console.log('Download:', download);
-  // console.log('Upload:', upload);
-  // console.log('Jitter:', jitter);
-  // console.log('Speed Test Output:', response);
+  console.log(gauges);
+}
+
+async function postMetrics(metrics) {
+  try {
+    const response = await axios.post(`http://localhost:/metrics${PORT}`, metrics);
+    console.log('Metrics posted successfully:', response.data);
+  } catch (error) {
+    console.error('Error posting metrics:', error.message);
+  }
 }
 
 // Example usage
@@ -65,9 +85,10 @@ async function speedtest() {
   try {
     const response = await runSpeedtestCLI();
     metrics = getMetrics(response);
+    postMetrics(metrics);
   } catch (error) {
     console.error('Error running speed test:', error);
   }
-  return metrics
 }
 
+speedtest();
