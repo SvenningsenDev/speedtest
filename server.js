@@ -17,13 +17,13 @@ const pingGauge = new promClient.Gauge({
 });
 
 const downloadGauge = new promClient.Gauge({
-    name: 'download',
-    help: 'download',
+    name: 'Download',
+    help: 'Download',
 });
 
 const uploadGauge = new promClient.Gauge({
-    name: 'upload',
-    help: 'upload',
+    name: 'Upload',
+    help: 'Upload',
 });
 
 const jitterGauge = new promClient.Gauge({
@@ -60,7 +60,7 @@ app.get('/metrics', async (req, res) => {
 });
 
 // Start the Express application
-const port = 3000;
+const port = 8000;
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
@@ -117,7 +117,7 @@ async function speedtest() {
 }
   
 // Run speedtest every 15 seconds
-const interval = 15 * 1000; // 15 seconds in milliseconds
+const interval = 30 * 1000; // 15 seconds in milliseconds
 
 setInterval(() => {
   speedtest();
